@@ -48,26 +48,43 @@ test_language() {
     local -i fails=0
     for input in tests/*.in ; do
         total+=1
+
         local index="${input/.in/}"
         index=$(basename "${index}")
-        
-        local input="tests/${index}.in"
-        local output="tests/${index}.out"
-        local output_tmp="tests/tmp-${index}.out"
 
-        ${runner} "${solution}" < "${input}" > "${output_tmp}"
-        if diff "${output}" "${output_tmp}" ; then
+        if run_single_test "${index}" "${runner}" "${solution}"; then
             echo "${next_indent}Test ${index} SUCCEEDED"
         else
             echo "${next_indent}Test ${index} FAILED"
             fails+=1
         fi
-        
-        rm "${output_tmp}"
-
     done
 
-    echo "${indent}Testing Python Completed, TOTAL ${total} tests, FAILED ${fails}"
+    local result="SUCCEEDED"
+    if [[ ${fails} -gt 0 ]]; then
+        result="FAILED"
+    fi
+    echo "${indent}Testing Python ${result}, TOTAL ${total} tests, FAILED ${fails}"
+    
+    return ${fails}
+}
+
+run_single_test() {
+    local index="${1}"
+    local runner="${2}"
+    local solution="${3}"
+
+    local input="tests/${index}.in"
+    local output="tests/${index}.out"
+    local output_tmp="tests/tmp-${index}.out"
+
+    ${runner} "${solution}" < "${input}" > "${output_tmp}"
+    diff "${output}" "${output_tmp}" > /dev/null
+    local ret=$?
+    
+    rm "${output_tmp}"
+    
+    return ${ret}
 }
 
 create_indentation() {
