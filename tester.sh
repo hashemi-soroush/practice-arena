@@ -1,11 +1,12 @@
 #!/bin/bash
 set -eu
 
-test_all() {
+test_problems() {
     echo "Running tests ..."
     for problem in */ ; do
         problem=${problem:0:-1}
         test_problem "${problem}" 0
+        echo "----------------------------------------------------------------------------------------------------"
     done
 }
 
@@ -15,18 +16,24 @@ test_problem() {
 
     local indent
     indent=$(create_indentation ${indent_count})
+    
     echo "${indent}Testing ${problem} ..."
-
     cd "${problem}"
-    for solution in solution.* ; do
-        test_language "${solution}" "((${indent_count}+1))"
-    done
+    test_solutions "${indent_count}"
     cd ..
-
     echo "${indent}Testing ${problem} Completed"
 }
 
-test_language() {
+test_solutions() {
+    local -i indent_count=${1}
+
+    for solution in solutions/* ; do
+        [[ -e "${solution}" ]] || continue
+        test_solution "${solution}" "((${indent_count}+1))"
+    done
+}
+
+test_solution() {
     local solution="${1}"
     local -i indent_count=${2}
 
@@ -35,24 +42,23 @@ test_language() {
     local next_indent
     next_indent=$(create_indentation "((${indent_count}+1))")
 
-    local language_name
     local runner
-    if [[ ${solution} == "solution.py" ]] ; then
-        language_name="Python"
-        runner="python"
-    fi
+    runner=$(generate_runner "${solution}")
     
-    echo "${indent}Testing ${language_name} ..."
+    local solution_name=${solution/*\//}
+    echo "${indent}Testing ${solution_name} ..."
 
     local -i total=0
     local -i fails=0
     for input in tests/*.in ; do
+        [[ -e "${input}" ]] || continue
+        
         total+=1
 
         local index="${input/.in/}"
         index=$(basename "${index}")
 
-        if run_single_test "${index}" "${runner}" "${solution}"; then
+        if run_single_test "${index}" "${runner}"; then
             echo "${next_indent}Test ${index} SUCCEEDED"
         else
             echo "${next_indent}Test ${index} FAILED"
@@ -64,21 +70,35 @@ test_language() {
     if [[ ${fails} -gt 0 ]]; then
         result="FAILED"
     fi
-    echo "${indent}Testing Python ${result}, TOTAL ${total} tests, FAILED ${fails}"
+    echo "${indent}Testing ${solution_name} ${result}, TOTAL ${total} tests, FAILED ${fails}"
     
     return ${fails}
+}
+
+generate_runner() {
+    local solution="${1}"
+
+    local runner
+    if [[ ${solution} == *.py ]] ; then
+        runner="python ${solution}"
+    else
+        echo "Unknown programming language for ${solution}"
+        return 1
+    fi
+
+    echo "${runner}"
+    return 0
 }
 
 run_single_test() {
     local index="${1}"
     local runner="${2}"
-    local solution="${3}"
 
     local input="tests/${index}.in"
     local output="tests/${index}.out"
     local output_tmp="tests/tmp-${index}.out"
 
-    ${runner} "${solution}" < "${input}" > "${output_tmp}"
+    ${runner} < "${input}" > "${output_tmp}"
     diff "${output}" "${output_tmp}" > /dev/null
     local ret=$?
     
@@ -96,4 +116,4 @@ create_indentation() {
     echo -e "${indent}"
 }
 
-test_all
+test_problems
