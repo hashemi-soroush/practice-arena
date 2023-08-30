@@ -1,9 +1,9 @@
 from collections import defaultdict
 from typing import NamedTuple
-from typing import MutableMapping, Sequence
+from typing import MutableMapping, MutableSequence
 
 def main():
-    graph, n = read_graph()
+    graph = read_graph()
     answer_queries(graph)
 
 class Graph(NamedTuple):
@@ -17,7 +17,7 @@ def read_graph() -> Graph:
     for _ in range(m):
         v, u = [int(x) for x in input().split()]
         graph.edges[v].append(u)
-    return graph, n
+    return graph
 
 def answer_queries(graph: Graph):
     q = int(input())
@@ -27,7 +27,7 @@ def answer_queries(graph: Graph):
         seen = [False] * graph.n
         print("YES" if dfs(v, u, graph, seen) else "NO")
 
-def dfs(cur: int, target: int, graph: Graph, seen: Sequence) -> bool:
+def dfs(cur: int, target: int, graph: Graph, seen: MutableSequence[bool]) -> bool:
     if cur == target:
         return True
     seen[cur] = True
